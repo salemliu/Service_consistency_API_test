@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Testing Tool</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --border: #e2e4e8;
+      --text: #1f2328;
+      --text-secondary: #6b7280;
+      --text-muted: #9aa0a6;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .version {
+      text-align: right;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+
+    /* Sections */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .oauth-layout {
+      display: flex;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .oauth-left {
+      flex: 1 1 55%;
+      min-width: 0;
+    }
+
+    .oauth-right {
+      flex: 1 1 45%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Form */
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fafbfc;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+      background: #fff;
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Request body block */
+    .request-body {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafbfc;
+    }
+
+    .request-body .block-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    /* Button */
+    .btn {
+      display: inline-block;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 6px;
+      width: 200px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+
+    /* Response area */
+    .response-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      margin-top: 12px;
+    }
+
+    .response-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      min-height: 18px;
+    }
+
+    .response-box {
+      flex: 1;
+      min-height: 300px;
+      background: #f6f7f9;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #24292f;
+    }
+
+    .response-box .placeholder {
+      color: var(--text-muted);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+    }
+
+    .response-box .error {
+      color: #c0392b;
+    }
+
+    /* Key-value parameter areas (Header / RequestBody) */
+    .kv-area {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafbfc;
+      margin-bottom: 18px;
+    }
+
+    .kv-area-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .kv-area-header .block-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .btn-add {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: #e5e7eb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-add:hover {
+      background: #d1d5db;
+    }
+
+    .kv-pair {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .kv-pair input {
+      padding: 8px 10px;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .kv-pair input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .kv-key {
+      flex: 1 1 40%;
+      min-width: 0;
+    }
+
+    .kv-value {
+      flex: 1 1 60%;
+      min-width: 0;
+    }
+
+    .btn-delete {
+      flex: 0 0 auto;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #b91c1c;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-delete:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    /* URL + Method row */
+    .url-method-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .field-grow {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .field-method {
+      flex: 0 0 150px;
+    }
+
+    /* DataCheck table */
+    .datacheck-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    .datacheck-table th,
+    .datacheck-table td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .datacheck-table thead th {
+      background: #f0f2f5;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .col-check {
+      width: 44px;
+      text-align: center;
+    }
+
+    /* Divider between rows */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    @media (max-width: 760px) {
+      .oauth-layout {
+        flex-direction: column;
+      }
+      .url-method-row {
+        flex-direction: column;
+      }
+      .field-method {
+        width: 100%;
+        flex: 1 1 auto;
+      }
+      .response-box {
+        min-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>API Testing Tool</h1>
+    </header>
+    <div class="version">v 0.1.0</div>
+
+    <!-- Section 1: OAuth 2.0 -->
+    <section class="section">
+      <h2 class="section-title">Oauth 2.0</h2>
+      <div class="oauth-layout">
+        <!-- Left: form -->
+        <div class="oauth-left">
+          <div class="field">
+            <label for="authUrl">Auth API URL</label>
+            <input type="text" id="authUrl" placeholder="https://example.com/oauth/token" />
+          </div>
+
+          <div class="request-body">
+            <div class="block-label">RequestBody</div>
+            <div class="field">
+              <label for="grantType">grant_type</label>
+              <select id="grantType">
+                <option value="client_credentials">client_credentials</option>
+                <option value="authorization_code">authorization_code</option>
+                <option value="password">password</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="clientId">client_id</label>
+              <input type="text" id="clientId" placeholder="your client id" />
+            </div>
+            <div class="field">
+              <label for="clientSecret">client_secret</label>
+              <input type="text" id="clientSecret" placeholder="your client secret" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: button + response -->
+        <div class="oauth-right">
+          <button class="btn" id="testAuthBtn" onclick="testAuth()">Test Auth</button>
+          <div class="response-area">
+            <div class="response-meta" id="responseMeta"></div>
+            <div class="response-box" id="responseBox">
+              <span class="placeholder">API response will appear here.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: API Field Info -->
+    <section class="section">
+      <h2 class="section-title">API Field Info</h2>
+
+      <!-- Row 1: API URL + Method -->
+      <div class="url-method-row">
+        <div class="field field-grow">
+          <label for="apiUrl">API URL</label>
+          <input type="text" id="apiUrl" placeholder="https://example.com/api/list" />
+        </div>
+        <div class="field field-method">
+          <label for="apiMethod">Method</label>
+          <select id="apiMethod">
+            <option value="GET" selected>GET</option>
+            <option value="POST">POST</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: Header (left) / RequestBody (right) -->
+      <div class="oauth-layout">
+        <div class="oauth-left">
+          <!-- Header -->
+          <div class="kv-area">
+            <div class="kv-area-header">
+              <span class="block-label">Header</span>
+              <button type="button" class="btn-add" onclick="addHeader()">add Parameter</button>
+            </div>
+            <div id="headerPairs"></div>
+          </div>
+        </div>
+        <div class="oauth-right">
+          <!-- RequestBody -->
+          <div class="kv-area">
+            <div class="kv-area-header">
+              <span class="block-label">RequestBody</span>
+              <button type="button" class="btn-add" onclick="addBody()">add Parameter</button>
+            </div>
+            <div id="bodyPairs"></div>
+          </div>
+          <br>
+          <button class="btn" id="apiTestBtn" onclick="apiTest()">API Test &amp; Data Check</button>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Row 3: button + response (left) / DataCheck + table (right) -->
+      <div class="oauth-layout">
+        <div class="oauth-left">
+          
+          <div class="response-area">
+            <div class="response-meta" id="apiResponseMeta"></div>
+            <div class="response-box" id="apiResponseBox">
+              <span class="placeholder">API response will appear here.</span>
+            </div>
+          </div>
+        </div>
+        <div class="oauth-right">
+          <div class="field">
+            <label for="dataCheck">DataCheck</label>
+            <select id="dataCheck" onchange="renderDataCheck()">
+              <option value="Delivery_Project" selected>Delivery_Project</option>
+              <option value="Issue_Ticket">Issue_Ticket</option>
+              <option value="Health_Check">Health_Check</option>
+            </select>
+          </div>
+          <table class="datacheck-table">
+            <thead>
+              <tr id="dataCheckHead"></tr>
+            </thead>
+            <tbody id="dataCheckBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function testAuth() {
+      const url = document.getElementById("authUrl").value.trim();
+      const grantType = document.getElementById("grantType").value;
+      const clientId = document.getElementById("clientId").value;
+      const clientSecret = document.getElementById("clientSecret").value;
+
+      const responseBox = document.getElementById("responseBox");
+      const responseMeta = document.getElementById("responseMeta");
+      const btn = document.getElementById("testAuthBtn");
+
+      if (!url) {
+        responseMeta.textContent = "";
+        responseBox.innerHTML = '<span class="error">Error: Auth API URL is required.</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Testing...";
+      responseBox.innerHTML = '<span class="placeholder">Requesting token...</span>';
+      responseMeta.textContent = "";
+
+      const startTime = performance.now();
+
+      // Submit collected parameters to the local backend, which proxies the real API call.
+      fetch("/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          url,
+          grant_type: grantType,
+          client_id: clientId,
+          client_secret: clientSecret
+        })
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok || data.error) {
+            responseMeta.textContent =
+              "Time: " + Math.round(performance.now() - startTime) + " ms";
+            responseBox.innerHTML =
+              '<span class="error">Request failed: ' +
+              escapeHtml(data.error || "Status " + response.status) + "</span>";
+            return;
+          }
+
+          let pretty = data.body;
+          try {
+            pretty = JSON.stringify(JSON.parse(data.body), null, 2);
+          } catch (e) {
+            // not JSON, show raw text
+          }
+
+          responseMeta.textContent =
+            "Status: " + data.status + " " + data.statusText +
+            "  ·  Time: " + data.elapsed + " ms";
+          responseBox.textContent = pretty;
+        })
+        .catch((err) => {
+          responseMeta.textContent =
+            "Time: " + Math.round(performance.now() - startTime) + " ms";
+          responseBox.innerHTML =
+            '<span class="error">Request failed: ' + escapeHtml(err.message) + "</span>";
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = "Test Auth";
+        });
+    }
+
+    function createPairRow(key, value) {
+      key = key || "";
+      value = value || "";
+
+      const row = document.createElement("div");
+      row.className = "kv-pair";
+      row.innerHTML =
+        '<input type="text" class="kv-key" placeholder="key" value="' + key + '">' +
+        '<input type="text" class="kv-value" placeholder="value" value="' + value + '">' +
+        '<button type="button" class="btn-delete" onclick="removePair(this)">Delete</button>';
+      return row;
+    }
+
+    function addHeader() {
+      document.getElementById("headerPairs").appendChild(createPairRow());
+    }
+
+    function addBody() {
+      document.getElementById("bodyPairs").appendChild(createPairRow());
+    }
+
+    function removePair(btn) {
+      btn.closest(".kv-pair").remove();
+    }
+
+    function collectPairs(containerId) {
+      const obj = {};
+      document.querySelectorAll("#" + containerId + " .kv-pair").forEach(function (row) {
+        const key = row.querySelector(".kv-key").value.trim();
+        if (key) {
+          obj[key] = row.querySelector(".kv-value").value;
+        }
+      });
+      return obj;
+    }
+
+    function extractAccessToken(text) {
+      if (!text) {
+        return null;
+      }
+
+      // Preferred: the OAuth response is JSON, so parse it directly.
+      try {
+        const obj = JSON.parse(text);
+        if (obj && obj.access_token) {
+          return obj.access_token;
+        }
+      } catch (e) {
+        // not JSON, fall through to regex
+      }
+
+      // Fallback: search the raw text for "access_token": "...".
+      const match = text.match(/"access_token"\s*:\s*"([^"]+)"/);
+      return match ? match[1] : null;
+    }
+
+    function apiTest() {
+      const url = document.getElementById("apiUrl").value.trim();
+      const method = document.getElementById("apiMethod").value;
+      const headers = collectPairs("headerPairs");
+      const body = collectPairs("bodyPairs");
+
+      const responseBox = document.getElementById("apiResponseBox");
+      const responseMeta = document.getElementById("apiResponseMeta");
+      const btn = document.getElementById("apiTestBtn");
+
+      if (!url) {
+        responseMeta.textContent = "";
+        responseBox.innerHTML = '<span class="error">Error: API URL is required.</span>';
+        return;
+      }
+
+      // Read the access_token from the OAuth response (block 1) and pass it along.
+      const accessToken = extractAccessToken(
+        document.getElementById("responseBox").textContent
+      );
+
+      if (!accessToken) {
+        responseMeta.textContent = "";
+        responseBox.innerHTML = '<span class="error">no access_token</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Testing...";
+      responseBox.innerHTML = '<span class="placeholder">Calling API...</span>';
+      responseMeta.textContent = "";
+
+      const startTime = performance.now();
+
+      fetch("/api", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          url,
+          method,
+          headers,
+          body,
+          access_token: accessToken
+        })
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+
+          console.log(data);
+
+          if (!response.ok || data.error) {
+            responseMeta.textContent =
+              "Time: " + Math.round(performance.now() - startTime) + " ms";
+            responseBox.innerHTML =
+              '<span class="error">Request failed: ' +
+              escapeHtml(data.error || "Status " + response.status) + "</span>";
+            return;
+          }
+
+          let pretty = data.body;
+          try {
+            pretty = JSON.stringify(JSON.parse(data.body), null, 2);
+          } catch (e) {
+            // not JSON, show raw text
+          }
+
+          responseMeta.textContent =
+            "Status: " + data.status + " " + data.statusText +
+            "  ·  Time: " + data.elapsed + " ms";
+          responseBox.textContent = pretty;
+        })
+        .catch((err) => {
+          responseMeta.textContent =
+            "Time: " + Math.round(performance.now() - startTime) + " ms";
+          responseBox.innerHTML =
+            '<span class="error">Request failed: ' + escapeHtml(err.message) + "</span>";
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = "API Test & Data Check";
+        });
+    }
+
+    // Initialize default RequestBody pairs for section 2
+    (function initDefaultBodyPairs() {
+      const container = document.getElementById("bodyPairs");
+      container.appendChild(createPairRow("PageNo", "1"));
+      container.appendChild(createPairRow("PageSize", "10"));
+    })();
+
+    function toggleAll(headerCheckbox) {
+      const table = headerCheckbox.closest("table");
+      table.querySelectorAll("tbody .row-check").forEach(function (cb) {
+        cb.checked = headerCheckbox.checked;
+      });
+    }
+
+    const dataCheckData = {
+      "Delivery_Project": {
+        headers: ["Description", "O3 Mandatory Field"],
+        rows: [
+          ["Project Id", "projectNo"],
+          ["Project name", "projectName"],
+          ["End customer name", "customerName"],
+          ["Huawei contract Id", "contractId"],
+          ["Uniportal account of project manager", "pmAccount"],
+          ["Uniportal account of qualify manager", "qmAccount"],
+          ["Uniportal account of creator", "createdByAccount"],
+          ["Project status", "projectStatus"],
+          ["Task Id", "taskId"],
+          ["Task name", "taskName"],
+          ["Task type", "taskType"],
+          ["Task status", "taskStatus"],
+          ["Uniportal account of task owner", "taskOwner"],
+          ["Issue Id,(If any)", "issueId"],
+          ["Issue Name/Summary,(If any)", "issueName"],
+          ["Uniportal account of issue creator,(If any)", "issueCreator"],
+          ["Issue creation time, in UTC timestamp format.(If any)", "issueCreateTime"],
+          ["Uniportal account of issue handler,(If any)", "issueHandler"],
+          ["Issue level,(If any)", "issueLevel"],
+          ["Issue status,(If any)", "issueStatus"],
+          ["Report Id", "reportId"],
+          ["Report file name", "reportFileName"],
+          ["Report type", "reportType"],
+          ["Binary data stream of the report file.", "reportFileContent"],
+          ["Report status", "reportStatus"],
+          ["Task IDs to which the report belongs.", "reportBelonging"],
+          ["Uniportal account of report creator", "reportCreationAccount"],
+          ["Report creation time, in UTC timestamp format.", "reportCreationTime"],
+          ["Authorize Huawei to review", "reportAuthorizeMark"]
+        ]
+      },
+      "Issue_Ticket": {
+        headers: ["Description", "O3 Mandatory Field"],
+        rows: [
+          ["Issue Id", "issueId"],
+          ["Issue Name/Summary", "issueName"],
+          ["Issue level", "issueLevel"],
+          ["Customer of the issue", "issueCustomer"],
+          ["Associated product name list", "deviceInfo"],
+          ["Uniportal account of issue creator", "issueCreator"],
+          ["Time when customer propose the issue, which is a UTC timestamp.", "issueCustomerProposesTime"],
+          ["Issue creation time, in UTC timestamp format.", "issueCreated Time"],
+          ["Uniportal account of issue handler", "issueHandler"],
+          ["Issue closed time", "issueFinishTime"],
+          ["Issue status", "issueStatus"],
+          ["Customer satisfaction score of the issue，ranging from 1 to 5.", "issueSatisfaction"]
+        ]
+      },
+      "Health_Check": {
+        headers: ["Description", "O3 Mandatory Field"],
+        rows: [
+          ["Health check ID", "healthCheckId"],
+          ["Health check name/summary", "healthCheckName"],
+          ["Health check belonging customer", "healthCheckCustomer"],
+          ["Uniportal account of health check creator", "healthCheckCreator"],
+          ["Health check creation time, in UTC timestamp format.", "healthCheckCreateTime"],
+          ["Uniportal account of health check handler", "healthCheckHandler"],
+          ["Health check status", "healthCheckStatus"],
+          ["Binary data stream of the health check report file.", "healthCheckAttachment"],
+          ["Health check satisfaction score, ranging from 1 to 5.", "healthCheckSatisfaction"],
+          ["Expected completion time, UTC timestamp.", "healthCheckReqFinishTime"],
+          ["Issue closed time, UTC timestamp.", "healthCheckFinishTime"]
+        ]
+      }
+    };
+
+    function renderDataCheck() {
+      const select = document.getElementById("dataCheck");
+      const data = dataCheckData[select.value];
+
+      const head = document.getElementById("dataCheckHead");
+      const body = document.getElementById("dataCheckBody");
+
+      // Header: checkbox column + CSV header columns
+      head.innerHTML = "";
+      const thCheck = document.createElement("th");
+      thCheck.className = "col-check";
+      thCheck.innerHTML = '<input type="checkbox" id="checkAll" onclick="toggleAll(this)" />';
+      head.appendChild(thCheck);
+
+      data.headers.forEach(function (h) {
+        const th = document.createElement("th");
+        th.textContent = h;
+        head.appendChild(th);
+      });
+
+      // Body: checkbox column + CSV row cells
+      body.innerHTML = "";
+      data.rows.forEach(function (row) {
+        const tr = document.createElement("tr");
+
+        const tdCheck = document.createElement("td");
+        tdCheck.className = "col-check";
+        tdCheck.innerHTML = '<input type="checkbox" class="row-check" />';
+        tr.appendChild(tdCheck);
+
+        row.forEach(function (cell) {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+
+        body.appendChild(tr);
+      });
+    }
+
+    // Render the DataCheck table for the default selection on load.
+    renderDataCheck();
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+  </script>
+</body>
+</html>
