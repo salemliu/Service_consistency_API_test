@@ -96,7 +96,7 @@
 4. 后端以 `application/x-www-form-urlencoded` 格式调用外部 OAuth 端点。
 5. 后端把上游的**状态码、状态文本、原始响应体、耗时**封装返回。
 6. 前端在返回区展示：状态码与耗时，以及**自动美化（缩进）的 JSON**（非 JSON 则原样显示）。
-7. 本次返回中的 `access_token` 会被前端记录，供第二块使用。
+7. 本次返回中若包含 `access_token` 键值对，前端会自动在第二块 **Header** 区域新增一个键值对（`access_token` = 令牌值；若该键已存在则更新其值）。
 
 ### 4.3 后端接口：`POST /proxy`
 
@@ -145,10 +145,10 @@
 
 1. 用户填写 API URL、Method、Header、RequestBody 后点击按钮。
 2. 前端校验 API URL 非空。
-3. 前端从**第一块的返回区**提取 `access_token`（`extractAccessToken`，优先 JSON 解析、失败则正则兜底）。
-   - 若提取不到，返回区提示 `no access_token` 并终止——即必须先在模块一完成鉴权。
-4. 前端将 `url`、`method`、`headers`、`body`、`access_token` 提交到本机 `POST /api`。
-5. 后端按 Method 调用外部 API，并把 `access_token` 一并放入**请求参数**（非 Header）。
+3. 前端收集 Header 与 RequestBody 键值对。
+   - `access_token` 由模块一在 Test Auth 成功后自动注入 Header 区域。
+4. 若 Header 中存在 `access_token`，前端将其从 `headers` 中提取，作为独立字段 `access_token` 与 `headers` 并列提交到本机 `POST /api`。
+5. 后端按 Method 调用外部 API：`headers` 原样透传为请求头，`access_token` 由后端附加到请求参数（body/query）。
 6. 前端展示状态码、耗时与美化后的 JSON 响应。
 
 ### 5.4 DataCheck 字段映射表
@@ -170,9 +170,9 @@
 | --- | --- | --- |
 | `url` | string | 业务 API 地址 |
 | `method` | string | `GET` 或 `POST` |
-| `headers` | object | 前端 Header 键值对 |
+| `headers` | object | 前端 Header 键值对（不含已提取的 `access_token`） |
 | `body` | object | 前端 RequestBody 键值对 |
-| `access_token` | string | 从 OAuth 返回中提取的令牌 |
+| `access_token` | string | 从 Header 中提取的令牌（可选） |
 
 - **上游调用规则**
   - `GET`：将 `body` 与 `access_token` 拼接为 URL 查询串。
@@ -204,14 +204,14 @@
 ### 7.1 OAuth 鉴权
 
 ```
-用户 → 前端 testAuth() → POST /proxy → 后端 fetch(OAuth URL) → 返回 token JSON → 前端展示并留存 access_token
+用户 → 前端 testAuth() → POST /proxy → 后端 fetch(OAuth URL) → 返回 token JSON → 前端展示并自动把 access_token 注入 Header 区域
 ```
 
 ### 7.2 业务 API 调用 + 字段核对
 
 ```
 用户 → 前端 apiTest()
-     → 提取第一块 responseBox 中的 access_token
+     → 收集 Header 与 RequestBody，提取 Header 中的 access_token
      → POST /api（携带 url/method/headers/body/access_token）
      → 后端 fetch(业务 URL，GET 拼 query / POST 拼 form body)
      → 返回响应 → 前端美化展示
@@ -230,13 +230,14 @@
 
 | 函数 | 职责 |
 | --- | --- |
-| `testAuth()` | 提交 OAuth 参数至 `/proxy` 并渲染结果 |
-| `apiTest()` | 收集参数、提取 access_token、提交 `/api` 并渲染结果 |
+| `testAuth()` | 提交 OAuth 参数至 `/proxy`，渲染结果并自动注入 access_token 到 Header |
+| `apiTest()` | 收集 Header/RequestBody，提取 Header 中的 access_token，提交 `/api` 并渲染结果 |
 | `createPairRow()` | 生成一组键值对输入行（key + value + Delete） |
-| `addHeader()` / `addBody()` | 在 Header / RequestBody 区域新增键值对 |
+| `addHeader()` / `addBody()` | 在 Header / RequestBody 区域新增空键值对 |
+| `addHeaderParameter()` | 在 Header 区域按 key 更新或新增一个键值对 |
 | `removePair()` | 删除指定键值对行 |
 | `collectPairs()` | 收集某区域内所有非空键值对为对象 |
-| `extractAccessToken()` | 从 OAuth 返回文本中提取 access_token |
+| `extractAccessToken()` | 从 OAuth 返回文本中提取 access_token（testAuth 调用） |
 | `renderDataCheck()` | 依据下拉选项渲染字段映射表 |
 | `toggleAll()` | 表头复选框全选 / 反选 |
 | `escapeHtml()` | HTML 转义，防止错误信息注入 |
@@ -247,8 +248,8 @@
 
 1. **字段自动核对尚未闭环**：当前 `DataCheck` 表格提供了「字段映射 + 勾选」交互，但 `apiTest()` 尚未读取表格勾选项，也未自动把 API 响应的字段与 `O3 Mandatory Field` 逐项比对。即「数据校验」目前停留在人工对照阶段，自动比对属于待实现能力。
 2. **鉴权仅支持 access_token 透传**：模块一仅支持三种 `grant_type` 的 token 获取，未实现 refresh_token、PKCE、授权码回调等高级 OAuth 流程。
-3. **access_token 传递位置**：当前 `access_token` 以**请求参数（body/query）**形式附加；如需改为标准 `Authorization: Bearer` 头，需在后端调整。
-4. **无鉴权请求不成立**：模块二强依赖模块一先取得 access_token，暂无「无 token 直接调用」的开关。
+3. **access_token 传递位置**：`access_token` 由前端自动注入 Header 区域，提交时被提取为独立字段 `access_token`，由后端附加到请求参数（body/query）；如需改为标准 `Authorization: Bearer` 头，需调整后端映射。
+4. **无 token 也可发起调用**：模块二不再拦截「缺少 access_token」的情况，未鉴权时同样会发起请求；调用是否成功取决于外部 API 是否要求鉴权。
 5. **数据静态内嵌**：DataCheck 数据由 CSV 预转换内嵌，CSV 更新后需重新生成内嵌 JSON。
 
 ---
