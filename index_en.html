@@ -556,6 +556,12 @@
             // not JSON, show raw text
           }
 
+          // If the OAuth response contains an access_token, add it as a Header parameter.
+          const token = extractAccessToken(data.body);
+          if (token) {
+            addHeaderParameter("access_token", token);
+          }
+
           responseMeta.textContent =
             "Status: " + data.status + " " + data.statusText +
             "  ·  Time: " + data.elapsed + " ms";
@@ -592,6 +598,18 @@
 
     function addBody() {
       document.getElementById("bodyPairs").appendChild(createPairRow());
+    }
+
+    function addHeaderParameter(key, value) {
+      const container = document.getElementById("headerPairs");
+      const rows = container.querySelectorAll(".kv-pair");
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].querySelector(".kv-key").value.trim() === key) {
+          rows[i].querySelector(".kv-value").value = value;
+          return;
+        }
+      }
+      container.appendChild(createPairRow(key, value));
     }
 
     function removePair(btn) {
@@ -635,6 +653,11 @@
       const headers = collectPairs("headerPairs");
       const body = collectPairs("bodyPairs");
 
+      // If the Header area contains an access_token, extract it so it can be
+      // submitted as its own field, parallel to headers.
+      const access_token = headers.access_token;
+      delete headers.access_token;
+
       const responseBox = document.getElementById("apiResponseBox");
       const responseMeta = document.getElementById("apiResponseMeta");
       const btn = document.getElementById("apiTestBtn");
@@ -642,17 +665,6 @@
       if (!url) {
         responseMeta.textContent = "";
         responseBox.innerHTML = '<span class="error">Error: API URL is required.</span>';
-        return;
-      }
-
-      // Read the access_token from the OAuth response (block 1) and pass it along.
-      const accessToken = extractAccessToken(
-        document.getElementById("responseBox").textContent
-      );
-
-      if (!accessToken) {
-        responseMeta.textContent = "";
-        responseBox.innerHTML = '<span class="error">no access_token</span>';
         return;
       }
 
@@ -673,7 +685,7 @@
           method,
           headers,
           body,
-          access_token: accessToken
+          access_token
         })
       })
         .then(async (response) => {
